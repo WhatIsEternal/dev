@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/mvc
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+         http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+
+
+http://www.springframework.org/schema/aop ">
+    <!--指定扫描的包-->
+    <context:component-scan base-package="com.test"></context:component-scan>
+    <mvc:annotation-driven>
+        <mvc:message-converters>
+            <bean class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter">
+                <property name="supportedMediaTypes">
+                    <list>
+                        <value>text/html;charset=utf-8</value>
+                        <value>application/json</value>
+                    </list>
+                </property>
+            </bean>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+
+    <!--    <bean class="org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer">
+    &lt;!&ndash;模板路径&ndash;&gt;
+    <property name="templateLoaderPath" value="/"/>
+    </bean>
+    <bean class="org.springframework.web.servlet.view.freemarker.FreeMarkerViewResolver">
+        <property name="prefix" value="/"/>
+        <property name="suffix" value=".html"/>
+    </bean>-->
+
+    <!-- <aop:aspectj-autoproxy></aop:aspectj-autoproxy>-->
+
+    <tx:annotation-driven transaction-manager="tm"></tx:annotation-driven>
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/"></property>
+        <property name="suffix" value=".jsp"></property>
+    </bean>
+
+    <bean id="ds" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="driverClassName" value="com.mysql.jdbc.Driver"></property>
+        <property name="url" value="jdbc:mysql://localhost:8080/mall"></property>
+        <property name="username" value="root"></property>
+        <property name="password" value="eternal"></property>
+    </bean>
+    <!--开启事务-->
+    <bean id="tm" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="ds"></property>
+    </bean>
+
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="ds"></property>
+        <property name="configLocation" value="classpath:mybatis.xml"></property>
+        <property name="mapperLocations">
+            <list>
+                <value>classpath:mapper/*.xml</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.test.dao"></property>
+    </bean>
+
+    <bean id="jdbcRealm" class="org.apache.shiro.realm.jdbc.JdbcRealm">
+        <property name="dataSource" ref="ds"/>
+        <property name="permissionsLookupEnabled" value="true"/>
+
+        <property name="authenticationQuery" value="select pwd from users where account=?"/>
+
+        <property name="userRolesQuery"
+                  value="select role_name from users_role left join role using(rid) left join users using(uid) where account=?"/>
+
+        <property name="permissionsQuery"
+                  value="select perm_name from role_perm left join role using(rid) left join perm using(pid) where role_name=?"/>
+    </bean>
+
+    <bean id="cacheManager" class="org.apache.shiro.cache.MemoryConstrainedCacheManager"></bean>
+
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="jdbcRealm"></property>
+        <property name="cacheManager" ref="cacheManager"></property>
+    </bean>
+
+
+    <bean id="shiro" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"></property>
+        <property name="loginUrl" value="/toIndex.do"></property>
+        <property name="unauthorizedUrl" value="/toNoqx.do"/>
+        <!-- 添加各种验证过滤器 -->
+        <property name="filters">
+            <map>
+                <entry key="roleOrFilter" value-ref="roleOrFilter"/>
+            </map>
+        </property>
+
+        <property name="filterChainDefinitions">
+            <value>
+                /admin/**=authc,roles[管理员]
+                /main/**=authc<!--,roleOrFilter[管理员,会员]-->
+                /**=anon
+            </value>
+        </property>
+    </bean>
+    <bean id="multipartResolver"
+          class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+    </bean>
+    <!-- 自定义的过滤器，用来判断当前用户是否是roleOrFilter["comm,test"]中的某个角色 -->
+    <bean id="roleOrFilter" class="com.test.filter.CustomRolesAuthorizationFilter"/>
+
+    <!--  <bean class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+      <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor"/>-->
+</beans>

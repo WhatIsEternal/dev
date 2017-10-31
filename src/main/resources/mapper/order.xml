@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.dao.OrderDao">
+    <!--保存订单-->
+    <insert id="createorder" parameterType="com.test.entity.Order">
+        INSERT INTO orders (id,code,total,owner,status,pay_status,ship_status) VALUES (#{id},#{code},#{total},#{owner},#{status},#{pay_status},#{ship_status})
+    </insert>
+    <!--订单详情-->
+    <insert id="saveOrderItem" parameterType="map">
+        insert into ordersitem (bookid,num,ordersid) VALUES
+        <foreach collection="list" item="book" separator=",">
+            (#{book.id},#{book.num},#{ordersid})
+        </foreach>
+    </insert>
+
+    <!--订单后台展示-->
+    <select id="showOrder" resultType="com.test.entity.Order">
+        select *  from orders
+    </select>
+
+    <!--修改支付状态-->
+    <update id="editOrder" >
+        update orders set status =  1 where id = #{id}
+     </update>
+    <!--展示所有订单信息-->
+    <select id="selectorderAll" parameterType="com.test.entity.User" resultType="com.test.entity.OrdersAll">
+        select o.id,o.code,o.total,o.createTime,o.owner,o.ship_status,os.num,b.title from orders o left join ordersitem os
+        on o.code = os.ordersid left join book b on b.id = os.bookid where o.owner =#{account}
+    </select>
+    <!--修改订单发货状态-->
+    <update id="editOrderShip"  parameterType="map">
+        update orders set ship_status = 3 where code = #{code}
+    </update>
+    <!--向退货表插入数据-->
+    <insert id="addOrderReturn" parameterType="map">
+      insert into order_return (ordercode,own_account,createorder_time,return_status,status) values (#{ordercode},#{own_account},#{createorder_time},#{return_status},#{status})
+    </insert>
+
+    <!--查询退货表-->
+    <select id="returnOrder" resultType="com.test.entity.OrderReturn">
+      SELECT  * from order_return
+    </select>
+
+    <!--修改退货表状态-->
+    <update id="editReturnOrder" >
+        update order_return set status = "1" where ordercode =#{ordercode}
+    </update>
+    <update id="editOrdersShip">
+      update orders set ship_status = 4 where code = #{ordercode}
+    </update>
+<!--按月份统计订单-->
+    <select id="ordersPic" resultType="com.test.entity.OrdersPic" >
+        select month(createTime) m,COUNT(month(createTime)) num from orders o GROUP BY m
+    </select>
+    <!--按用户统计订单-->
+    <select id="ordersUsers" resultType="com.test.entity.OrdersPic">
+        select o.owner,COUNT(owner) num from orders o GROUP BY owner
+    </select>
+</mapper>

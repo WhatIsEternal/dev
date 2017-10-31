@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.test.dao.UserDao">
+    <select id="login" resultType="com.test.entity.User">
+        select * from users where account=#{account} and pwd=#{pwd}
+    </select>
+    <insert id="adda" parameterType="com.test.entity.User">
+        insert into users(account,pwd) values(#{account},#{pwd})
+    </insert>
+
+    <resultMap id="m1" type="com.test.entity.User">
+        <result property="uid" column="uid"></result>
+        <result property="account" column="account"></result>
+        <association property="role" javaType="com.test.entity.Role">
+            <result property="role_name" column="role_name"></result>
+            <result property="rid" column="rid"></result>
+        </association>
+    </resultMap>
+
+
+    <select id="findd" resultType="com.test.entity.User">
+        select * from users limit #{start},3
+    </select>
+    <select id="showUser" resultMap="m1">
+        select u.uid,u.account,r.role_name,r.rid from users u left join users_role ur
+        using(uid) left join role r using(rid)
+    </select>
+
+    <delete id="del" parameterType="list">
+        delete from users where uid in
+        <foreach collection="list" item="x" open="(" separator="," close=")">
+            #{x}
+        </foreach>
+    </delete>
+    <update id="upd" parameterType="map">
+        update users set pwd=#{pwd} where uid=#{uid}
+    </update>
+
+    <select id="search" parameterType="map" resultType="com.test.entity.User">
+        select * from users
+        <where>
+            <if test="type=='account'">
+                account like #{key}
+            </if>
+            <if test="type=='pwd'">
+                pwd like #{key}
+            </if>
+        </where>
+    </select>
+
+    <update id="editr" parameterType="map">
+        update users_role set rid = #{rid} where uid = #{uid}
+    </update>
+
+</mapper>
